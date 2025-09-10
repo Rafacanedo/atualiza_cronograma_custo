@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
 
 st.set_page_config(page_title="Gerador de Cronograma de Desembolso", page_icon="📊", layout="centered")
 
@@ -77,8 +76,9 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # ======================
                     cronograma["Desembolso final"] = cronograma["Peso"] * cronograma["Desembolso"]
                     cronograma["Comprometido final"] = cronograma["Peso"] * cronograma["Comprometido"]
+                    cronograma["Estimativa final"] = cronograma["Peso"] * cronograma["Estimativa"]
 
-                    df_final = cronograma[["EDT", "Desembolso final", "Comprometido final"]].copy()
+                    df_final = cronograma[["EDT", "Desembolso final", "Comprometido final", "Estimativa final"]].copy()
                     df_final = df_final.groupby("EDT", as_index=False).sum().sort_values(by="EDT").reset_index(drop=True)
 
                     edt = dados["EDT"].copy()
