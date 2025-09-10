@@ -31,7 +31,6 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # 1. Preparando Excel de Equalização
                     # ======================
                     dados = pd.read_excel(arquivo_equivalencia,
-                                          sheet_name="Cronog. CONTRATO",
                                           usecols=[0 , 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                                           header=0)
 
