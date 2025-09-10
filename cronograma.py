@@ -65,6 +65,15 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # 2. Preparando tabela desembolso
                     # ======================
                     orcamento = pd.read_excel(arquivo_desembolso)
+                    orcamento = orcamento.columns.rename({"ITENS" : "Codigo Serviço",
+                                                          "SERVIÇOS" : "Serviço",
+                                                          "ORÇAMENTO" : "Orcamento",
+                                                          "COMPROMETIDO" : "Comprometido",
+                                                          "ESTOQUE" : "Estoque",
+                                                          "OCS" : "OCs",
+                                                          "SALDO DE CONTRATO" : "Saldo",
+                                                          "ESTIMATIVA NO TERMINO" : "Estimativa"
+                                                          })
 
                     # ======================
                     # 3. Merge tarefas e orçamento
@@ -74,11 +83,14 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # ======================
                     # 4. Calculando quantidades finais
                     # ======================
-                    cronograma["Desembolso final"] = cronograma["Peso"] * cronograma["Desembolso"]
+                    cronograma["Orcamento final"] = cronograma["Peso"] * cronograma["Orcamento"]
                     cronograma["Comprometido final"] = cronograma["Peso"] * cronograma["Comprometido"]
+                    cronograma["Estoque final"] = cronograma["Peso"] * cronograma["Estoque"]
+                    cronograma["OCs final"] = cronograma["Peso"] * cronograma["OCs"]
+                    cronograma["Saldo final"] = cronograma["Peso"] * cronograma["Saldo"]
                     cronograma["Estimativa final"] = cronograma["Peso"] * cronograma["Estimativa"]
 
-                    df_final = cronograma[["EDT", "Desembolso final", "Comprometido final", "Estimativa final"]].copy()
+                    df_final = cronograma[["EDT","Orcamento final","Comprometido final","Estoque final","OCs final","Saldo final","Estimativa final"]].copy()
                     df_final = df_final.groupby("EDT", as_index=False).sum().sort_values(by="EDT").reset_index(drop=True)
 
                     edt = dados["EDT"].copy()
