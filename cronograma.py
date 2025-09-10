@@ -31,7 +31,6 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # 1. Preparando Excel de Equalização
                     # ======================
                     dados = pd.read_excel(arquivo_equivalencia,
-                                          usecols=[0 , 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
                                           header=0)
 
                     tarefas = dados.copy()
@@ -56,24 +55,27 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     })
 
                     tarefas = tarefas.dropna(subset=["Peso"]).reset_index(drop=True)
-                    tarefas = tarefas[~tarefas["Peso"].astype(str).str.upper().isin(["0", "X", "(NA)"])]
+                    tarefas = tarefas[~tarefas["Peso"].astype(str).str.upper().isin(["X", "(NA)"])]
                     tarefas = tarefas.sort_values(by=["EDT","Num_Item"]).reset_index(drop=True)
                     tarefas = tarefas[["EDT", "Codigo Serviço", "Peso"]]
+                    tarefas["EDT"] = tarefas["EDT"].astype(str)
 
                     # ======================
                     # 2. Preparando tabela desembolso
                     # ======================
                     orcamento = pd.read_excel(arquivo_desembolso)
                     orcamento = orcamento.rename(columns={"ITENS" : "Codigo Serviço",
-                                                          "SERVIÇOS" : "Serviço",
-                                                          "ORÇAMENTO" : "Orcamento",
-                                                          "COMPROMETIDO" : "Comprometido",
-                                                          "ESTOQUE" : "Estoque",
-                                                          "OCS" : "OCs",
-                                                          "SALDO DE CONTRATO" : "Saldo",
-                                                          "ESTIMATIVA NO TERMINO" : "Estimativa"
-                                                          })
+                                                        "SERVIÇOS" : "Serviços",
+                                                        "ORÇAMENTO" : "Orcamento",
+                                                        "DESEMBOLSOS" : "Desembolso",
+                                                        "COMPROMETIDO" : "Comprometido",
+                                                        "ESTOQUE/ADIANTAMENTO" : "Estoque",
+                                                        "OCS EM ABERTO" : "OCs",
+                                                        "SALDO DE CONTRATO" : "Saldo",
+                                                        "ESTIMATIVA NO TERMINO" : "Estimativa"
+                                                        })
 
+                    orcamento["Codigo Serviço"] = orcamento["Codigo Serviço"].astype(str)
                     # ======================
                     # 3. Merge tarefas e orçamento
                     # ======================
@@ -83,17 +85,28 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # 4. Calculando quantidades finais
                     # ======================
                     cronograma["Orcamento final"] = cronograma["Peso"] * cronograma["Orcamento"]
+                    cronograma["Desembolso final"] = cronograma["Peso"] * cronograma["Desembolso"]
                     cronograma["Comprometido final"] = cronograma["Peso"] * cronograma["Comprometido"]
                     cronograma["Estoque final"] = cronograma["Peso"] * cronograma["Estoque"]
                     cronograma["OCs final"] = cronograma["Peso"] * cronograma["OCs"]
                     cronograma["Saldo final"] = cronograma["Peso"] * cronograma["Saldo"]
                     cronograma["Estimativa final"] = cronograma["Peso"] * cronograma["Estimativa"]
 
-                    df_final = cronograma[["EDT","Orcamento final","Comprometido final","Estoque final","OCs final","Saldo final","Estimativa final"]].copy()
+                    df_final = cronograma[["EDT","Orcamento final","Desembolso final", "Comprometido final","Estoque final","OCs final","Saldo final","Estimativa final"]].copy()
                     df_final = df_final.groupby("EDT", as_index=False).sum().sort_values(by="EDT").reset_index(drop=True)
 
-                    edt = dados["EDT"].copy()
+                    edt = dados[["EDT", "Nome da Tarefa"]].copy()
                     df_final = pd.merge(edt, df_final, how="left", on=["EDT"])
+
+                    df_final = df_final.rename(columns={
+                                                        "Orcamento final":"ORÇAMENTO",
+                                                        "Desembolso final":"DESEMBOLSOS",
+                                                        "Comprometido final":"COMPROMETIDO",
+                                                        "Estoque final":"ESTOQUE/ADIANTAMENTO",
+                                                        "OCs final":"OCS EM ABERTO",
+                                                        "Saldo final":"SALDO DE CONTRATO",
+                                                        "Estimativa final":"ESTIMATIVA NO TERMINO"
+                                                        })
 
                     # ======================
                     # 5. Exportando resultado
