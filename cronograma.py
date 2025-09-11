@@ -65,15 +65,15 @@ if alteracao_edt == "Não" and arquivo_equivalencia is not None:
                     # ======================
                     orcamento = pd.read_excel(arquivo_desembolso)
                     orcamento = orcamento.rename(columns={"ITENS" : "Codigo Serviço",
-                                                        "SERVIÇOS" : "Serviços",
-                                                        "ORÇAMENTO" : "Orcamento",
-                                                        "DESEMBOLSOS" : "Desembolso",
-                                                        "COMPROMETIDO" : "Comprometido",
-                                                        "ESTOQUE/ADIANTAMENTO" : "Estoque",
-                                                        "OCS EM ABERTO" : "OCs",
-                                                        "SALDO DE CONTRATO" : "Saldo",
-                                                        "ESTIMATIVA NO TERMINO" : "Estimativa"
-                                                        })
+                                    "SERVIÇOS" : "Serviços",
+                                    "ORÇAMENTO" : "Orcamento",
+                                    "DESEMBOLSOS REALIZADOS (R$)" : "Desembolso",
+                                    "COMPROMETIDO" : "Comprometido",
+                                    "ESTOQUE/ADIANTAMENTO" : "Estoque",
+                                    "OCS EM ABERTO" : "OCs",
+                                    "SALDO DE CONTRATO" : "Saldo",
+                                    "ESTIMATIVA NO TERMINO" : "Estimativa"
+                                    })
 
                     orcamento["Codigo Serviço"] = orcamento["Codigo Serviço"].astype(str)
                     # ======================
