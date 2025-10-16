@@ -87,7 +87,7 @@ def to_excel(df):
     """Converte um DataFrame para um objeto BytesIO em formato Excel."""
     output = BytesIO()
     # 'with' garante que o writer será fechado corretamente
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Cronograma')
     processed_data = output.getvalue()
     return processed_data
@@ -166,14 +166,6 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
 
             except Exception as e:
                 st.error(f"❌ Ocorreu um erro durante o processamento:")
-                st.warning(
-                    "**Dica:** Um erro comum ocorre quando os nomes das colunas nos arquivos Excel não correspondem "
-                    "exatamente ao esperado. **Verifique com atenção as colunas do arquivo `desembolso.xlsx`** "
-                    "as colunas devem ser:"
-                    "ITENS, SERVIÇOS, ORÇAMENTO ORIGINAL, DESEMBOLSOS REALIZADOS,"
-                    "COMPROMETIDO TOTAL, ESTOQUE SIGNIFICATIVO/ADIANTAMENTO, OCS EM ABERTO,"
-                    "SALDO DE CONTRATO EM ABERTO, ESTIMATIVA NO TERMINO (ENT)"
-                )
                 st.error(f"Detalhes do erro: {e}")
 else:
     st.info("Por favor, envie ambos os arquivos para continuar.")
