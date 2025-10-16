@@ -66,13 +66,13 @@ def processar_desembolso(df_desembolso):
     orcamento = df_desembolso.rename(columns={
         "ITENS": "Codigo Serviço",
         "SERVIÇOS": "Serviços",
-        "ORÇAMENTO": "Orcamento",
-        "DESEMBOLSOS REALIZADOS (R$)": "Desembolso",
-        "COMPROMETIDO": "Comprometido",
-        "ESTOQUE/ADIANTAMENTO": "Estoque",
+        "ORÇAMENTO ORIGINAL": "Orcamento",
+        "DESEMBOLSOS REALIZADOS": "Desembolso",
+        "COMPROMETIDO TOTAL": "Comprometido",
+        "ESTOQUE SIGNIFICATIVO/ADIANTAMENTO": "Estoque",
         "OCS EM ABERTO": "OCs",
-        "SALDO DE CONTRATO": "Saldo",
-        "ESTIMATIVA NO TERMINO": "Estimativa"
+        "SALDO DE CONTRATO EM ABERTO": "Saldo",
+        "ESTIMATIVA NO TERMINO (ENT)": "Estimativa"
     })
     orcamento["Codigo Serviço"] = orcamento["Codigo Serviço"].astype(str)
     return orcamento
@@ -179,13 +179,13 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
 
             except Exception as e:
                 st.error(f"❌ Ocorreu um erro durante o processamento:")
-                st.exception(e) # st.exception exibe o erro de forma mais detalhada
                 st.warning(
                     "**Dica:** Um erro comum ocorre quando os nomes das colunas nos arquivos Excel não correspondem "
                     "exatamente ao esperado. **Verifique com atenção as colunas do arquivo `desembolso.xlsx`** "
                     "as colunas devem ser:"
-                    "ITENS, SERVIÇOS, ORÇAMENTO, DESEMBOLSOS REALIZADOS (R$), COMPROMETIDO, ESTOQUE/ADIANTAMENTO,"
-                    "OCS EM ABERTO, SALDO DE CONTRATO, ESTIMATIVA NO TERMINO"
+                    "ITENS, SERVIÇOS, ORÇAMENTO ORIGINAL, DESEMBOLSOS REALIZADOS,"
+                    "COMPROMETIDO TOTAL, ESTOQUE SIGNIFICATIVO/ADIANTAMENTO, OCS EM ABERTO,"
+                    "SALDO DE CONTRATO EM ABERTO, ESTIMATIVA NO TERMINO (ENT)"
                 )
 else:
     st.info("Por favor, envie ambos os arquivos para continuar.")
