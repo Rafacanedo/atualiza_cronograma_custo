@@ -66,13 +66,6 @@ def processar_desembolso(df_desembolso):
     orcamento = df_desembolso.rename(columns={
         "ITENS": "Codigo Serviço",
         "SERVIÇOS": "Serviços",
-        "ORÇAMENTO ORIGINAL": "Orcamento",
-        "DESEMBOLSOS REALIZADOS": "Desembolso",
-        "COMPROMETIDO TOTAL": "Comprometido",
-        "ESTOQUE SIGNIFICATIVO/ADIANTAMENTO": "Estoque",
-        "OCS EM ABERTO": "OCs",
-        "SALDO DE CONTRATO EM ABERTO": "Saldo",
-        "ESTIMATIVA NO TERMINO (ENT)": "Estimativa"
     })
     orcamento["Codigo Serviço"] = orcamento["Codigo Serviço"].astype(str)
     return orcamento
@@ -81,10 +74,11 @@ def calcular_valores_finais(cronograma):
     """
     Calcula os valores finais multiplicando as colunas pelo peso.
     """
-    colunas_para_calcular = [
-        "Orcamento", "Desembolso", "Comprometido", 
-        "Estoque", "OCs", "Saldo", "Estimativa"
-    ]
+    colunas_para_calcular = cronograma.columns.tolist()
+    colunas_para_calcular.remove("EDT")
+    colunas_para_calcular.remove("Codigo Serviço")
+    colunas_para_calcular.remove("Peso")
+
     for col in colunas_para_calcular:
         cronograma[f"{col} final"] = cronograma["Peso"] * cronograma[col]
     return cronograma
@@ -141,10 +135,11 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                 # 4. Calculando quantidades finais
                 cronograma = calcular_valores_finais(cronograma)
 
-                colunas_finais = [
-                    "EDT", "Orcamento final", "Desembolso final", "Comprometido final",
-                    "Estoque final", "OCs final", "Saldo final", "Estimativa final"
-                ]
+                # Selecionando colunas finais para o resultado
+                # queremos apenas EDT e as colunas finais calculadas
+                colunas_finais = ["EDT"]
+                colunas_finais += [col for col in cronograma.columns if col.endswith("final")]
+
                 df_final = cronograma[colunas_finais].copy()
                 
                 # Agrupando e somando os resultados por EDT
@@ -155,16 +150,8 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                 edt["EDT"] = edt["EDT"].astype(str)
                 df_final = pd.merge(edt, df_final, how="left", on="EDT")
 
-                # Renomeando colunas para o formato final de saída
-                df_final = df_final.rename(columns={
-                    "Orcamento final": "ORÇAMENTO",
-                    "Desembolso final": "DESEMBOLSOS",
-                    "Comprometido final": "COMPROMETIDO",
-                    "Estoque final": "ESTOQUE/ADIANTAMENTO",
-                    "OCs final": "OCS EM ABERTO",
-                    "Saldo final": "SALDO DE CONTRATO",
-                    "Estimativa final": "ESTIMATIVA NO TERMINO"
-                })
+                # Renomeando colunas removendo "final"
+                df_final = df_final.rename(columns=lambda x: x.replace(" final", "") if x.endswith(" final") else x)
 
                 # 5. Exportando resultado
                 excel_file = to_excel(df_final)
