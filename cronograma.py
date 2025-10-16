@@ -33,14 +33,19 @@ def processar_equivalencia(df_equivalencia):
     tarefas.columns = novas_colunas
     
     # Transforma a tabela de formato largo para longo
-    tarefas = pd.wide_to_long(
-        tarefas,
-        stubnames=["Item_Orç", "Peso_Orç"],
-        i=["EDT"],
-        j="Num_Item",
-        sep="_",
-        suffix=r'\d+'
-    ).reset_index()
+    try:
+        tarefas = pd.wide_to_long(
+            tarefas,
+            stubnames=["Item_Orç", "Peso_Orç"],
+            i=["EDT"],
+            j="Num_Item",
+            sep="_",
+            suffix=r'\d+'
+        ).reset_index()
+    except ValueError as e:
+        st.error(f"Erro ao reorganizar a planilha de equivalência. Verifique se as colunas seguem o padrão '1_Item_Orç', '1_Peso_Orç', etc.")
+        st.error(f"Detalhe do erro do Pandas: {e}")
+        return None
 
     tarefas = tarefas.rename(columns={
         "Item_Orç": "Codigo Serviço",
@@ -57,40 +62,70 @@ def processar_equivalencia(df_equivalencia):
     tarefas["EDT"] = tarefas["EDT"].astype(str)
     tarefas["Codigo Serviço"] = tarefas["Codigo Serviço"].astype(str)
     
+    # --- CORREÇÃO ---
+    # Converte a coluna 'Peso' para um tipo numérico (float).
+    # O parâmetro errors='coerce' transformará qualquer valor que não seja numérico em NaN (Not a Number).
+    # Em seguida, .fillna(0.0) substitui esses NaN por 0.0.
+    # Isso garante que a coluna 'Peso' contenha apenas números, evitando o erro de multiplicação.
+    tarefas["Peso"] = pd.to_numeric(tarefas["Peso"], errors='coerce').fillna(0.0)
+    
     return tarefas
 
 def processar_desembolso(df_desembolso):
     """
-    Prepara e renomeia as colunas da planilha de desembolso.
+    Prepara e renomeia as colunas da planilha de desembolso, garantindo que os tipos de dados estejam corretos.
     """
-    orcamento = df_desembolso.rename(columns={
+    orcamento = df_desembolso.copy()
+    # Renomeia as colunas de identificação
+    orcamento = orcamento.rename(columns={
         "ITENS": "Codigo Serviço",
         "SERVIÇOS": "Serviços",
     })
+    
+    if "Codigo Serviço" not in orcamento.columns:
+        st.error("A planilha de desembolso precisa ter uma coluna chamada 'ITENS'.")
+        return None
+
     orcamento["Codigo Serviço"] = orcamento["Codigo Serviço"].astype(str)
+    
+    # --- CORREÇÃO ---
+    # Itera sobre todas as colunas que não são de identificação para garantir que sejam numéricas.
+    colunas_de_valor = [col for col in orcamento.columns if col not in ["Codigo Serviço", "Serviços"]]
+    for col in colunas_de_valor:
+        # Aplica a mesma lógica da função anterior para garantir que os dados de desembolso são numéricos.
+        orcamento[col] = pd.to_numeric(orcamento[col], errors='coerce').fillna(0.0)
+        
     return orcamento
 
 def calcular_valores_finais(cronograma):
     """
-    Calcula os valores finais multiplicando as colunas pelo peso.
+    Calcula os valores finais multiplicando as colunas de desembolso pelo peso.
     """
-    colunas_para_calcular = cronograma.columns.tolist()
-    colunas_para_calcular.remove("EDT")
-    colunas_para_calcular.remove("Codigo Serviço")
-    colunas_para_calcular.remove("Peso")
+    # Identifica as colunas de desembolso (que não são colunas de identificação)
+    colunas_para_calcular = [
+        col for col in cronograma.columns 
+        if col not in ["EDT", "Codigo Serviço", "Peso", "Nome da Tarefa", "Serviços"]
+    ]
+    
+    # --- CORREÇÃO PREVENTIVA ---
+    # Após a junção (merge), algumas linhas podem ter valores nulos (NaN) se um serviço
+    # existia na planilha de equivalência mas não na de desembolso.
+    # Preenchemos esses valores nulos com 0.0 para garantir que os cálculos funcionem.
+    cronograma[colunas_para_calcular] = cronograma[colunas_para_calcular].fillna(0.0)
 
     for col in colunas_para_calcular:
+        # A multiplicação agora é segura, pois todas as colunas envolvidas são numéricas.
         cronograma[f"{col} final"] = cronograma["Peso"] * cronograma[col]
+        
     return cronograma
 
 def to_excel(df):
     """Converte um DataFrame para um objeto BytesIO em formato Excel."""
     output = BytesIO()
-    # 'with' garante que o writer será fechado corretamente
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Cronograma')
-    processed_data = output.getvalue()
-    return processed_data
+    # O método getvalue() é chamado após o bloco 'with' para garantir que tudo foi escrito.
+    return output.getvalue()
 
 # --- Interface do Streamlit ---
 
@@ -107,7 +142,10 @@ with col1:
 with col2:
     arquivo_desembolso = st.file_uploader("2. Envie **desembolso.xlsx**", type=["xlsx"])
 
-# Verifica se os arquivos foram carregados e exibe prévias
+# Garante que os dataframes sejam lidos apenas uma vez
+df_eq_original = None
+df_des_original = None
+
 if arquivo_equivalencia:
     df_eq_original = pd.read_excel(arquivo_equivalencia)
     with st.expander("🧐 Prévia do arquivo de Equivalência"):
@@ -119,15 +157,20 @@ if arquivo_desembolso:
         st.dataframe(df_des_original.head())
 
 # Lógica principal do aplicativo
-if arquivo_equivalencia is not None and arquivo_desembolso is not None:
+if df_eq_original is not None and df_des_original is not None:
     if st.button("🚀 Gerar Cronograma", type="primary"):
         with st.spinner("Processando os dados... Por favor, aguarde."):
             try:
                 # 1. Preparando Excel de Equalização
                 tarefas = processar_equivalencia(df_eq_original)
+                if tarefas is None:
+                    # A função já exibiu o erro, então apenas paramos a execução
+                    st.stop()
 
                 # 2. Preparando tabela desembolso
                 orcamento = processar_desembolso(df_des_original)
+                if orcamento is None:
+                    st.stop()
 
                 # 3. Merge tarefas e orçamento
                 cronograma = pd.merge(tarefas, orcamento, how="left", on="Codigo Serviço")
@@ -136,7 +179,6 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                 cronograma = calcular_valores_finais(cronograma)
 
                 # Selecionando colunas finais para o resultado
-                # queremos apenas EDT e as colunas finais calculadas
                 colunas_finais = ["EDT"]
                 colunas_finais += [col for col in cronograma.columns if col.endswith("final")]
 
@@ -146,17 +188,21 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                 df_final = df_final.groupby("EDT", as_index=False).sum().sort_values(by="EDT").reset_index(drop=True)
                 
                 # Adicionando de volta o 'Nome da Tarefa' para referência
-                edt = df_eq_original[["EDT", "Nome da Tarefa"]].drop_duplicates().copy()
-                edt["EDT"] = edt["EDT"].astype(str)
-                df_final = pd.merge(edt, df_final, how="left", on="EDT")
+                if "Nome da Tarefa" in df_eq_original.columns:
+                    edt = df_eq_original[["EDT", "Nome da Tarefa"]].drop_duplicates().copy()
+                    edt["EDT"] = edt["EDT"].astype(str)
+                    df_final = pd.merge(edt, df_final, how="left", on="EDT")
+                else:
+                    st.warning("Coluna 'Nome da Tarefa' não encontrada no arquivo de equivalência. O resultado será gerado sem ela.")
 
-                # Renomeando colunas removendo "final"
+                # Renomeando colunas removendo " final"
                 df_final = df_final.rename(columns=lambda x: x.replace(" final", "") if x.endswith(" final") else x)
 
                 # 5. Exportando resultado
                 excel_file = to_excel(df_final)
                 
                 st.success("✅ Arquivo gerado com sucesso!")
+                
                 st.download_button(
                     label="📥 Baixar Resultado (cronograma_desembolso.xlsx)",
                     data=excel_file,
@@ -165,8 +211,8 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                 )
 
             except Exception as e:
-                st.error(f"❌ Ocorreu um erro durante o processamento:")
-                st.error(f"Detalhes do erro: {e}")
+                st.error(f"❌ Ocorreu um erro inesperado durante o processamento:")
+                # st.exception é melhor para depuração, pois mostra todos os detalhes do erro.
+                st.exception(e) 
 else:
     st.info("Por favor, envie ambos os arquivos para continuar.")
-
