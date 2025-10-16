@@ -93,7 +93,7 @@ def to_excel(df):
     """Converte um DataFrame para um objeto BytesIO em formato Excel."""
     output = BytesIO()
     # 'with' garante que o writer será fechado corretamente
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Cronograma')
     processed_data = output.getvalue()
     return processed_data
