@@ -187,6 +187,7 @@ if arquivo_equivalencia is not None and arquivo_desembolso is not None:
                     "COMPROMETIDO TOTAL, ESTOQUE SIGNIFICATIVO/ADIANTAMENTO, OCS EM ABERTO,"
                     "SALDO DE CONTRATO EM ABERTO, ESTIMATIVA NO TERMINO (ENT)"
                 )
+                st.error(f"Detalhes do erro: {e}")
 else:
     st.info("Por favor, envie ambos os arquivos para continuar.")
 
